@@ -1,0 +1,7 @@
+*.mp4
+node_modules/
+
+*.log
+.*
+!.gitignore
+!.prettierrc
