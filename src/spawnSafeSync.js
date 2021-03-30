@@ -10,6 +10,16 @@ const defaultOptions = {
 
 const { spawnSync } = require("child_process")
 
+class ConsoleError {
+  /**
+   * @param {import('node:child_process').SpawnSyncReturns<Buffer>} result
+   */
+  constructor(result) {
+    this.result = result
+  }
+}
+module.exports.ConsoleError = ConsoleError
+
 module.exports.spawnSafeSync = (
   /** @type {string} */ command,
   /** @type {string[]} */ args,
@@ -26,7 +36,7 @@ module.exports.spawnSafeSync = (
       }
     }
     if (mergedOptions.throwOnError) {
-      throw result
+      throw new ConsoleError(result)
     }
   }
   return result

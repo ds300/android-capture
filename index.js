@@ -1,9 +1,9 @@
-const { spawn } = require("child_process")
 const { join } = require("path")
 
 const chalk = require("kleur")
-const { spawnSafeSync } = require("./src/spawnSafeSync")
-const { getDevice } = require("./src/getDevice")
+const { init, adb, adbAsync } = require("./src/adb")
+const { existsSync } = require("fs")
+const { countdown } = require("./src/countdown")
 
 const version = require(join(__dirname, "./package.json")).version
 
@@ -18,31 +18,25 @@ process.stdin.resume()
 process.stdin.setEncoding("utf8")
 
 /**
- * @returns {"1" | "0"}
+ * @returns {boolean}
  */
 function getVisibleTouches() {
-  // @ts-ignore
-  return spawnSafeSync("adb", [
-    "shell",
-    "settings",
-    "get",
-    "system",
-    "show_touches",
-  ]).stdout.toString()
+  return (
+    adb(
+      "shell",
+      "settings",
+      "get",
+      "system",
+      "show_touches",
+    ).stdout.toString() === "1"
+  )
 }
 
 /**
  * @param {boolean} visible
  */
 function setVisibleTouches(visible) {
-  spawnSafeSync("adb", [
-    "shell",
-    "settings",
-    "put",
-    "system",
-    "show_touches",
-    visible ? "1" : "0",
-  ])
+  adb("shell", "settings", "put", "system", "show_touches", visible ? "1" : "0")
 }
 
 const ESCAPE_KEYS = {
@@ -64,12 +58,12 @@ const ENTER_KEYS = {
 
 /**
  * @param {string} outFile
- * @returns {Promise<void>}
+ * @returns {Promise<{escaped: boolean}>}
  */
 function recordVideo(outFile) {
   return new Promise((resolve, reject) => {
     const internalFilePath = `/sdcard/android-screen-recording.mp4`
-    const recordProc = spawn("adb", ["shell", "screenrecord", internalFilePath])
+    const recordProc = adbAsync("shell", "screenrecord", internalFilePath)
     let err = ""
     recordProc.stderr.on("data", (data) => {
       err += data.toString()
@@ -82,13 +76,17 @@ function recordVideo(outFile) {
       }
       process.stdin.removeListener("data", handleKeyPress)
       console.log("\n         ", chalk.green("✔"), "Cut! 🎬", "\n")
-      console.log("Transferring video from phone...\n")
-      await new Promise((r) => setTimeout(r, 2000))
-      spawnSafeSync("adb", ["pull", internalFilePath, outFile])
-      spawnSafeSync("adb", ["shell", "rm", internalFilePath])
-      resolve()
+      if (!escaped) {
+        console.log("Transferring video from phone...\n")
+        await new Promise((r) => setTimeout(r, 2000))
+        adb("pull", internalFilePath, outFile)
+      } else {
+        console.log("Cancelling...")
+      }
+      adb("shell", "rm", internalFilePath)
+      resolve({ escaped })
     })
-    console.log("\n         ", chalk.red("⦿"), "Recording...", "\n")
+    console.log("         ", chalk.red("⦿"), "Recording...", "\n")
     printCallToAction()
 
     // on any data into stdin
@@ -134,24 +132,42 @@ function printCallToAction() {
 }
 
 async function run() {
-  const device = await getDevice()
-  console.log({device})
-  process.exit(1)
-  const outPath = "./recording.mp4"
-  setVisibleTouches(true)
-
   try {
-    await recordVideo(outPath)
-    console.log("That's a wrap!", chalk.bold(outPath))
-    console.log()
+    await init()
+    await countdown()
+
+    const date = new Date()
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+
+    let outPath = `./recording.${year}-${month}-${day}.00.mp4`
+    let i = 1
+    while (existsSync(outPath)) {
+      outPath = `./recording.${year}-${month}-${day}.${i
+        .toString()
+        .padStart(2, "0")}.mp4`
+      i++
+    }
+    setVisibleTouches(true)
+
+    try {
+      const result = await recordVideo(outPath)
+      if (!result.escaped) {
+        console.log("That's a wrap!", chalk.bold(outPath))
+      }
+      console.log()
+    } catch (e) {
+      console.error("failed in main loop", e)
+    }
+
+    setVisibleTouches(false)
+
+    process.exit(0)
   } catch (e) {
     console.error(e)
+    process.exit(1)
   }
-
-  setVisibleTouches(false)
-
-  process.exit(0)
 }
 
 run()
-// getVisibleTouches()

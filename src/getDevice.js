@@ -1,5 +1,5 @@
 const { spawnSafeSync } = require("./spawnSafeSync")
-const { bgRed, bold, bgBlue, cyan, gray, magenta } = require("kleur")
+const { bgRed, bold, bgBlue, cyan, gray } = require("kleur")
 
 const ERROR = bgRed(" ERROR ")
 
@@ -57,7 +57,7 @@ function parseDeviceLine(line) {
  * @returns {Promise<number>}
  */
 async function selectOption(title, options) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     console.log()
     console.log("        ", bgBlue(` ${title} `))
     console.log()
@@ -78,6 +78,7 @@ async function selectOption(title, options) {
     const reset = () => {
       process.stdout.write("\r\033[K")
       process.stdout.write("\033[1A\r")
+      process.stdout.write("\033[K")
       process.stdout.write("\033[1A\r")
       for (let i = 0; i < options.length; i++) {
         process.stdout.write("\033[1A\r")
@@ -90,15 +91,22 @@ async function selectOption(title, options) {
      * @param {string} key
      */
     function handleKeyPress(key) {
-      key = key.toString()
       if (key === "\r") {
         // enter!
-        process.stdout.removeListener("data", handleKeyPress)
+        process.stdin.removeListener("data", handleKeyPress)
+
+        reset()
+        process.stdout.write("\033[1A\r")
+        process.stdout.write("\033[K")
+        process.stdout.write("\033[1A\r")
+        process.stdout.write("\033[K")
+
         resolve(selection)
       } else if (key === "\u001b[B") {
         // arrow down!
         selection = Math.min(selection + 1, options.length - 1)
         reset()
+
         draw()
       } else if (key === "\u001b[A") {
         // arrow up!
@@ -109,7 +117,7 @@ async function selectOption(title, options) {
         process.exit(1)
       }
     }
-    process.stdout.on("data", handleKeyPress)
+    process.stdin.on("data", handleKeyPress)
   })
 }
 
