@@ -32,6 +32,21 @@ function getVisibleTouches() {
   )
 }
 
+function getScreenSize() {
+  const output = adb("shell", "wm", "size").stdout.toString()
+  const match = output.match(/(\d+)x(\d+)/)
+  if (!match) {
+    throw new Error(
+      "Can't parse output for command 'adb shell wm size': " +
+        JSON.stringify(output),
+    )
+  }
+  return {
+    width: Number(match[1]),
+    height: Number([match[2]]),
+  }
+}
+
 /**
  * @param {boolean} visible
  */
@@ -57,13 +72,68 @@ const ENTER_KEYS = {
 }
 
 /**
+ * @param {string} internalFilePath
+ * @param {boolean=} reducedSize
+ * @returns {Promise<import("child_process").ChildProcessWithoutNullStreams>}
+ */
+async function getVideoRecordProcess(internalFilePath, reducedSize = false) {
+  let err = ""
+  let didFinish = false
+
+  const screenSize = getScreenSize()
+  if (reducedSize) {
+    screenSize.width = Math.floor(screenSize.width / 2)
+    screenSize.height = Math.floor(screenSize.height / 2)
+  }
+  const { width, height } = screenSize
+
+  const proc = adbAsync(
+    "shell",
+    "screenrecord",
+    internalFilePath,
+    "--size",
+    `${width}x${height}`,
+  )
+
+  proc.stderr.on("data", (data) => {
+    err += data.toString()
+  })
+  proc.on("error", (e) => {
+    err += "\nFailed to start video record process.\n\n" + e.stack
+    err = err.trim()
+    didFinish = true
+  })
+  proc.on("exit", () => {
+    didFinish = true
+  })
+
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      proc.stderr.removeAllListeners()
+      proc.removeAllListeners()
+      if (!err && !didFinish) {
+        resolve(proc)
+      } else if (err && err.includes("Encoder failed") && !reducedSize) {
+        getVideoRecordProcess(internalFilePath, true)
+          .then(resolve)
+          .catch(reject)
+      } else if (err) {
+        reject(new Error(err))
+      } else {
+        reject(new Error("Failed to capture video :/"))
+      }
+    }, 200)
+  })
+}
+
+/**
  * @param {string} outFile
  * @returns {Promise<{escaped: boolean}>}
  */
-function recordVideo(outFile) {
+async function recordVideo(outFile) {
+  const internalFilePath = `/sdcard/android-screen-recording.mp4`
+  const recordProc = await getVideoRecordProcess(internalFilePath)
   return new Promise((resolve, reject) => {
-    const internalFilePath = `/sdcard/android-screen-recording.mp4`
-    const recordProc = adbAsync("shell", "screenrecord", internalFilePath)
     let err = ""
     recordProc.stderr.on("data", (data) => {
       err += data.toString()
@@ -71,10 +141,8 @@ function recordVideo(outFile) {
     let escaped = false
     recordProc.on("error", reject)
     recordProc.on("exit", async () => {
-      if (err) {
-        console.error(err)
-      }
       process.stdin.removeListener("data", handleKeyPress)
+
       console.log("\n         ", chalk.green("✔"), "Cut! 🎬", "\n")
       if (!escaped) {
         console.log("Transferring video from phone...\n")
