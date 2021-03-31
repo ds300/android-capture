@@ -4,6 +4,8 @@ const chalk = require("kleur")
 const { init, adb, adbAsync } = require("./src/adb")
 const { existsSync } = require("fs")
 const { countdown } = require("./src/countdown")
+const { cli } = require("./src/cli")
+const { normalize } = require("path")
 
 const version = require(join(__dirname, "./package.json")).version
 
@@ -72,22 +74,20 @@ const ENTER_KEYS = {
 }
 
 /**
- * @param {string} internalFilePath
- * @param {boolean=} reducedSize
- * @returns {Promise<import("child_process").ChildProcessWithoutNullStreams>}
+ * @param {string} outFile
+ * @returns {Promise<{escaped: boolean}>}
  */
-async function getVideoRecordProcess(internalFilePath, reducedSize = false) {
-  let err = ""
-  let didFinish = false
-
+async function recordVideo(outFile) {
+  const internalFilePath = `/sdcard/android-screen-recording.mp4`
   const screenSize = getScreenSize()
-  if (reducedSize) {
+
+  if (!cli.flags.fullRes) {
     screenSize.width = Math.floor(screenSize.width / 2)
     screenSize.height = Math.floor(screenSize.height / 2)
   }
   const { width, height } = screenSize
 
-  const proc = adbAsync(
+  const recordProc = adbAsync(
     "shell",
     "screenrecord",
     internalFilePath,
@@ -95,44 +95,6 @@ async function getVideoRecordProcess(internalFilePath, reducedSize = false) {
     `${width}x${height}`,
   )
 
-  proc.stderr.on("data", (data) => {
-    err += data.toString()
-  })
-  proc.on("error", (e) => {
-    err += "\nFailed to start video record process.\n\n" + e.stack
-    err = err.trim()
-    didFinish = true
-  })
-  proc.on("exit", () => {
-    didFinish = true
-  })
-
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      proc.stderr.removeAllListeners()
-      proc.removeAllListeners()
-      if (!err && !didFinish) {
-        resolve(proc)
-      } else if (err && err.includes("Encoder failed") && !reducedSize) {
-        getVideoRecordProcess(internalFilePath, true)
-          .then(resolve)
-          .catch(reject)
-      } else if (err) {
-        reject(new Error(err))
-      } else {
-        reject(new Error("Failed to capture video :/"))
-      }
-    }, 200)
-  })
-}
-
-/**
- * @param {string} outFile
- * @returns {Promise<{escaped: boolean}>}
- */
-async function recordVideo(outFile) {
-  const internalFilePath = `/sdcard/android-screen-recording.mp4`
-  const recordProc = await getVideoRecordProcess(internalFilePath)
   return new Promise((resolve, reject) => {
     let err = ""
     recordProc.stderr.on("data", (data) => {
@@ -142,6 +104,10 @@ async function recordVideo(outFile) {
     recordProc.on("error", reject)
     recordProc.on("exit", async () => {
       process.stdin.removeListener("data", handleKeyPress)
+
+      if (err) {
+        console.log(err)
+      }
 
       console.log("\n         ", chalk.green("✔"), "Cut! 🎬", "\n")
       if (!escaped) {
@@ -201,22 +167,20 @@ function printCallToAction() {
 
 async function run() {
   try {
+    const [filename, ...others] = cli.input
+
+    if (others.length) {
+      console.error("Unexpected arguements: ", others.join(" "))
+      cli.showHelp(1)
+    }
+
+    const outPath = normalize(sanitizeFilename(filename) ?? generateFilename())
+
     await init()
     await countdown()
 
-    const date = new Date()
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-    const day = date.getDate()
+    const hasVisibleTouchesByDefault = getVisibleTouches()
 
-    let outPath = `./recording.${year}-${month}-${day}.00.mp4`
-    let i = 1
-    while (existsSync(outPath)) {
-      outPath = `./recording.${year}-${month}-${day}.${i
-        .toString()
-        .padStart(2, "0")}.mp4`
-      i++
-    }
     setVisibleTouches(true)
 
     try {
@@ -229,7 +193,7 @@ async function run() {
       console.error("failed in main loop", e)
     }
 
-    setVisibleTouches(false)
+    setVisibleTouches(hasVisibleTouchesByDefault)
 
     process.exit(0)
   } catch (e) {
@@ -238,4 +202,35 @@ async function run() {
   }
 }
 
+function generateFilename() {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+
+  let filename = `./recording.${year}-${month}-${day}.00.mp4`
+  let i = 1
+  while (existsSync(filename)) {
+    filename = `./recording.${year}-${month}-${day}.${i
+      .toString()
+      .padStart(2, "0")}.mp4`
+    i++
+  }
+  return filename
+}
+
+/**
+ *
+ * @param {string | null | undefined} filename
+ */
+function sanitizeFilename(filename) {
+  if (!filename) {
+    return null
+  }
+  if (!filename.endsWith(".mp4")) {
+    return filename + ".mp4"
+  } else {
+    return filename
+  }
+}
 run()
