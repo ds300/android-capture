@@ -1,3 +1,5 @@
+const logUpdate = require("log-update")
+
 const countdownString = "3...2...1..."
 
 module.exports.countdown = async () => {
@@ -14,9 +16,8 @@ module.exports.countdown = async () => {
         0,
         numCharsOfCountdownStringToUse,
       )
-      process.stdout.write(`    🎬 Get ready! ${countdownSoFar}\r`)
+      logUpdate(`          🎬 Get ready! ${countdownSoFar}\n\n`)
       if (ratio >= 1) {
-        process.stdout.write("\033[K")
         clearInterval(interval)
         r(null)
       }

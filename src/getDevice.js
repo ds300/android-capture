@@ -1,5 +1,7 @@
-const { spawnSafeSync } = require("./spawnSafeSync")
 const { bgRed, bold, bgBlue, cyan, gray } = require("kleur")
+const logUpdate = require("log-update")
+
+const { spawnSafeSync } = require("./spawnSafeSync")
 
 const ERROR = bgRed(" ERROR ")
 
@@ -58,32 +60,20 @@ function parseDeviceLine(line) {
  */
 async function selectOption(title, options) {
   return new Promise((resolve) => {
-    console.log()
-    console.log("        ", bgBlue(` ${title} `))
-    console.log()
     let selection = 0
     const draw = () => {
+      const lines = ["", "        " + bgBlue(` ${title} `), ""]
       for (let i = 0; i < options.length; i++) {
-        console.log(
-          "  ",
-          i === selection
-            ? cyan().bold("• [" + (i + 1) + "]")
-            : gray("  [" + (i + 1) + "]"),
-          options[i],
+        lines.push(
+          "  " +
+            (i === selection
+              ? cyan().bold("• [" + (i + 1) + "]")
+              : gray("  [" + (i + 1) + "]")) +
+            options[i],
         )
       }
-      console.log()
-      console.log("Use up/down arrow keys and hit [ENTER]")
-    }
-    const reset = () => {
-      process.stdout.write("\r\033[K")
-      process.stdout.write("\033[1A\r")
-      process.stdout.write("\033[K")
-      process.stdout.write("\033[1A\r")
-      for (let i = 0; i < options.length; i++) {
-        process.stdout.write("\033[1A\r")
-        process.stdout.write("\033[K")
-      }
+      lines.push("", "Use up/down arrow keys and hit [ENTER]")
+      logUpdate(lines.join("\n"))
     }
 
     draw()
@@ -94,24 +84,14 @@ async function selectOption(title, options) {
       if (key === "\r") {
         // enter!
         process.stdin.removeListener("data", handleKeyPress)
-
-        reset()
-        process.stdout.write("\033[1A\r")
-        process.stdout.write("\033[K")
-        process.stdout.write("\033[1A\r")
-        process.stdout.write("\033[K")
-
         resolve(selection)
       } else if (key === "\u001b[B") {
         // arrow down!
         selection = Math.min(selection + 1, options.length - 1)
-        reset()
-
         draw()
       } else if (key === "\u001b[A") {
         // arrow up!
         selection = Math.max(selection - 1, 0)
-        reset()
         draw()
       } else if (key in ESCAPE_KEYS) {
         process.exit(1)

@@ -6,10 +6,11 @@ const { existsSync } = require("fs")
 const { countdown } = require("./src/countdown")
 const { cli } = require("./src/cli")
 const { normalize } = require("path")
+const logUpdate = require("log-update")
 
 const version = require(join(__dirname, "./package.json")).version
 
-console.log(chalk.bold("record-android-screen"), version)
+console.log(chalk.bold("record-android-screen"), version, "\n")
 
 // without this, we would only get streams once enter is pressed
 process.stdin.setRawMode(true)
@@ -95,6 +96,8 @@ async function recordVideo(outFile) {
     `${width}x${height}`,
   )
 
+  const display = new RecordingMessage().start()
+
   return new Promise((resolve, reject) => {
     let err = ""
     recordProc.stderr.on("data", (data) => {
@@ -104,24 +107,27 @@ async function recordVideo(outFile) {
     recordProc.on("error", reject)
     recordProc.on("exit", async () => {
       process.stdin.removeListener("data", handleKeyPress)
+      display.stop()
 
       if (err) {
         console.log(err)
       }
 
-      console.log("\n         ", chalk.green("✔"), "Cut! 🎬", "\n")
       if (!escaped) {
-        console.log("Transferring video from phone...\n")
+        logUpdate(
+          `          ${chalk.green(
+            "✔",
+          )} Cut!\n\nTransferring video from phone...`,
+        )
         await new Promise((r) => setTimeout(r, 2000))
+        console.log()
         adb("pull", internalFilePath, outFile)
       } else {
-        console.log("Cancelling...")
+        logUpdate(`          ${chalk.bold().red("♺")} Cancelling...\n\n`)
       }
       adb("shell", "rm", internalFilePath)
       resolve({ escaped })
     })
-    console.log("         ", chalk.red("⦿"), "Recording...", "\n")
-    printCallToAction()
 
     // on any data into stdin
 
@@ -140,8 +146,6 @@ async function recordVideo(outFile) {
       } else if (key in ENTER_KEYS) {
         recordProc.kill("SIGTERM")
         process.stdin.removeListener("data", handleKeyPress)
-      } else {
-        printCallToAction()
       }
       // write the key to stdout all normal like
     }
@@ -149,20 +153,41 @@ async function recordVideo(outFile) {
   })
 }
 
+class RecordingMessage {
+  constructor() {
+    /**
+     * @type {NodeJS.Timeout | null}
+     */
+    this.interval = null
+    this.toggle = true
+  }
+  start() {
+    this.print()
+    this.interval = setInterval(this.print.bind(this), 800)
+    return this
+  }
+  stop() {
+    if (this.interval) {
+      clearInterval(this.interval)
+    }
+    logUpdate("")
+    return this
+  }
+  print() {
+    logUpdate(`          ${this.toggle ? chalk.red("⦿") : " "} Recording...
+
+Press ${printKey(
+      chalk.bold().green("SPACE"),
+    )} to finish recording, or ${printKey("ESC")} to cancel.`)
+    this.toggle = !this.toggle
+  }
+}
+
 /**
  * @param {string} label
  */
 function printKey(label) {
   return chalk.gray("[") + label + chalk.gray("]")
-}
-function printCallToAction() {
-  console.log(
-    "Press",
-    printKey(chalk.bold().green("SPACE")),
-    "to finish recording, or",
-    printKey("ESC"),
-    "to cancel.",
-  )
 }
 
 async function run() {
@@ -233,4 +258,12 @@ function sanitizeFilename(filename) {
     return filename
   }
 }
+
 run()
+
+/**
+ * TODO:
+ *
+ * - get nice robust abstract user input loop
+ * - make sure ctrl-c always works
+ */
