@@ -8,6 +8,9 @@ const { normalize } = require("path")
 const { recordVideo } = require("./src/recordVideo")
 const { takeScreenshot } = require("./src/takeScreenshot")
 const open = require("open")
+const { bgRed, bold } = require("kleur")
+const { selectOption } = require("./src/selectOption")
+const logUpdate = require("log-update")
 
 const version = require(join(__dirname, "./package.json")).version
 
@@ -33,20 +36,42 @@ const imageTypes = {
   png: true,
 }
 
+/**
+ * @param {any} message
+ */
+function fail(message) {
+  console.error(bgRed(" ERROR "), message)
+  console.error("\nRun with", bold("--help"), "for usage information.")
+  process.exit(1)
+}
+
 async function run() {
   try {
     const [type = "", filename, ...others] = cli.input
 
-    const mode =
+    /**
+     * @type {"video" | "image" | null}
+     */
+    let mode =
       type in imageTypes ? "image" : type in videoTypes ? "video" : null
 
     if (!mode) {
-      cli.showHelp(1)
+      const idx = await selectOption("What do you want to capture?", [
+        "Video",
+        "Screenshot",
+      ])
+      mode = idx === 0 ? "video" : "image"
+      logUpdate(
+        `💡 Hint! In the future you can run ${bold(
+          `npx android-capture ${mode}`,
+        )}\n`,
+      )
+      logUpdate.done()
+      await new Promise((r) => setTimeout(r, 1000))
     }
 
     if (others.length) {
-      console.error("Unexpected arguements: ", others.join(" "))
-      cli.showHelp(1)
+      fail("Unexpected arguements: " + others.join(" "))
     }
 
     const extension = mode === "image" ? "png" : "mp4"
@@ -58,12 +83,18 @@ async function run() {
         generateFilename(defaultFilename, extension),
     )
 
+    if (cli.flags.copy && mode === "video") {
+      fail(`The ${bold("--copy")} option does not work with video.`)
+    }
+
+    const useTemporaryFile = !filename && cli.flags.copy && !cli.flags.open
+
     await init()
 
     if (mode === "video") {
       await recordVideo(outPath)
     } else {
-      await takeScreenshot(outPath)
+      await takeScreenshot(outPath, useTemporaryFile)
     }
 
     if (cli.flags.open) {

@@ -1,0 +1,6 @@
+#!/usr/bin/osascript
+
+on run args
+  set thePath to (first item of args)
+  set the clipboard to (read thePath as «class PNGf»)
+end

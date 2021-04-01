@@ -1,4 +1,4 @@
-const { bold } = require("kleur")
+const { bold, grey } = require("kleur")
 const meow = require("meow")
 
 module.exports.cli = meow(
@@ -9,6 +9,9 @@ module.exports.cli = meow(
     $ npx android-capture image [<out-file>] [...options]
 
   Options
+
+    ${bold("--copy")} ${grey("(image capture only)")}
+      Copies the screenshot to the clipboard. Currently macOS only.
 
     ${bold("--full-res")}
       Record video in full resolution (may not work in emulators).
@@ -49,6 +52,10 @@ module.exports.cli = meow(
       countdown: {
         type: "boolean",
         default: true,
+      },
+      copy: {
+        type: "boolean",
+        default: false,
       },
     },
     allowUnknownFlags: false,
