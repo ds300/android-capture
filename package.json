@@ -14,5 +14,12 @@
     "log-update": "^4.0.0",
     "meow": "^9.0.0",
     "open": "^8.0.4"
-  }
+  },
+  "bin": {
+    "android-capture": "./index.js"
+  },
+  "files": [
+    "src/**/*",
+    "index.js"
+  ]
 }
