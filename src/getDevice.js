@@ -1,6 +1,6 @@
 const { bgRed, bold, bgBlue, cyan, gray } = require("kleur")
 const logUpdate = require("log-update")
-const { pushContext, popContext } = require("./keyboardInput")
+const { pushKeyboardContext, popKeyboardContext } = require("./keyboardInput")
 
 const { spawnSafeSync } = require("./spawnSafeSync")
 
@@ -79,11 +79,11 @@ async function selectOption(title, options) {
     }
 
     draw()
-    pushContext({
+    pushKeyboardContext({
       handleKeyPress(key) {
         if (key === "\r") {
           // enter!
-          popContext()
+          popKeyboardContext()
           resolve(selection)
         } else if (key === "\u001b[B") {
           // arrow down!

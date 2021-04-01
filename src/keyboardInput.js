@@ -29,10 +29,12 @@ const ESCAPE_KEYS = {
  */
 const handlers = []
 
-module.exports.pushContext = (/** @type {HandleContext} */ handleContext) => {
+module.exports.pushKeyboardContext = (
+  /** @type {HandleContext} */ handleContext,
+) => {
   handlers.push(handleContext)
 }
-module.exports.popContext = () => {
+module.exports.popKeyboardContext = () => {
   handlers.pop()
 }
 
@@ -54,11 +56,11 @@ process.stdin.addListener("data", (key) => {
   }
 })
 
-process.on('SIGTERM', handleEscape)
-process.on('SIGINT', handleEscape)
-process.on('SIGTSTP', handleEscape)
-process.on('SIGQUIT', handleEscape)
+process.on("SIGTERM", handleEscape)
+process.on("SIGINT", handleEscape)
+process.on("SIGTSTP", handleEscape)
+process.on("SIGQUIT", handleEscape)
 
-process.on('SIGHUP', () => {
+process.on("SIGHUP", () => {
   process.exit(1)
 })
