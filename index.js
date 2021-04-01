@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 const { join } = require("path")
 
 const chalk = require("kleur")
@@ -14,6 +16,7 @@ const logUpdate = require("log-update")
 
 const version = require(join(__dirname, "./package.json")).version
 
+console.log()
 console.log(chalk.bold("android-capture"), version, "\n")
 
 /**
