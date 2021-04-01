@@ -16,10 +16,8 @@ module.exports.selectOption = async function selectOption(title, options) {
         lines.push(
           "  " +
             (i === selection
-              ? cyan().bold("• [" + (i + 1) + "]")
-              : gray("  [" + (i + 1) + "]")) +
-            " " +
-            options[i],
+              ? cyan().bold("• " + options[i])
+              : gray("• ") + options[i]),
         )
       }
       lines.push("", "Use up/down arrow keys and hit [ENTER]")
@@ -32,6 +30,7 @@ module.exports.selectOption = async function selectOption(title, options) {
         if (key === "\r") {
           // enter!
           popKeyboardContext()
+          logUpdate()
           resolve(selection)
         } else if (key === "\u001b[B") {
           // arrow down!
