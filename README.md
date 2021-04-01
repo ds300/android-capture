@@ -1,12 +1,14 @@
+
+<p align="center">
+  <img src="https://ds300.github.io/android-capture/android-capture.gif" width="80%" alt="android-capture demo" />
+</p>
+
 <p align="center">
   <img src="https://ds300.github.io/android-capture/android-capture-logo.svg" width="80%" alt="android-capture" />
 </p>
 
 `android-capture` makes it easy to capture video and screenshots from Android devices and emulators.
 
-<p align="center">
-  <img src="https://ds300.github.io/android-capture/android-capture.gif" width="80%" alt="android-capture demo" />
-</p>
 
 ## Usage
 
