@@ -32,7 +32,9 @@ const ENTER_KEYS = {
  * @param {string} outFile
  */
 module.exports.recordVideo = async (outFile) => {
-  await countdown()
+  if (cli.flags.countdown) {
+    await countdown()
+  }
 
   const hasVisibleTouchesByDefault = getVisibleTouches()
 
