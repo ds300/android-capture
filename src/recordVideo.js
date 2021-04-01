@@ -2,7 +2,9 @@ const { red, green, bold, gray } = require("kleur")
 const logUpdate = require("log-update")
 const { adb, adbAsync } = require("./adb")
 const { cli } = require("./cli")
+const { countdown } = require("./countdown")
 const { pushKeyboardContext, popKeyboardContext } = require("./keyboardInput")
+const { getVisibleTouches, setVisibleTouches } = require("./visibleTouches")
 
 function getScreenSize() {
   const output = adb("shell", "wm", "size").stdout.toString()
@@ -28,9 +30,32 @@ const ENTER_KEYS = {
 
 /**
  * @param {string} outFile
+ */
+module.exports.recordVideo = async (outFile) => {
+  await countdown()
+
+  const hasVisibleTouchesByDefault = getVisibleTouches()
+
+  setVisibleTouches(true)
+
+  try {
+    const result = await createRecording(outFile)
+    if (!result.escaped) {
+      console.log("That's a wrap!", bold(outFile))
+    }
+    console.log()
+  } catch (e) {
+    console.error("failed in main loop", e)
+  }
+
+  setVisibleTouches(hasVisibleTouchesByDefault)
+}
+
+/**
+ * @param {string} outFile
  * @returns {Promise<{escaped: boolean}>}
  */
-module.exports.recordVideo = async function recordVideo(outFile) {
+async function createRecording(outFile) {
   const internalFilePath = `/sdcard/android-screen-recording.mp4`
   const screenSize = getScreenSize()
 

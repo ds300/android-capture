@@ -3,45 +3,72 @@ const { join } = require("path")
 const chalk = require("kleur")
 const { init } = require("./src/adb")
 const { existsSync } = require("fs")
-const { countdown } = require("./src/countdown")
 const { cli } = require("./src/cli")
 const { normalize } = require("path")
-const { setVisibleTouches, getVisibleTouches } = require("./src/visibleTouches")
 const { recordVideo } = require("./src/recordVideo")
+const { takeScreenshot } = require("./src/takeScreenshot")
+const open = require("open")
 
 const version = require(join(__dirname, "./package.json")).version
 
-console.log(chalk.bold("record-android-screen"), version, "\n")
+console.log(chalk.bold("android-capture"), version, "\n")
+
+/**
+ * @type {Record<string, boolean>}
+ */
+const videoTypes = {
+  video: true,
+  movie: true,
+  mp4: true,
+}
+
+/**
+ * @type {Record<string, boolean>}
+ */
+const imageTypes = {
+  image: true,
+  screenshot: true,
+  still: true,
+  picture: true,
+  png: true,
+}
 
 async function run() {
   try {
-    const [filename, ...others] = cli.input
+    const [type = "", filename, ...others] = cli.input
+
+    const mode =
+      type in imageTypes ? "image" : type in videoTypes ? "video" : null
+
+    if (!mode) {
+      cli.showHelp(1)
+    }
 
     if (others.length) {
       console.error("Unexpected arguements: ", others.join(" "))
       cli.showHelp(1)
     }
 
-    const outPath = normalize(sanitizeFilename(filename) ?? generateFilename())
+    const extension = mode === "image" ? "png" : "mp4"
+    const defaultFilename =
+      mode === "image" ? "android-screenshot" : "android-video"
+
+    const outPath = normalize(
+      sanitizeFilename(filename, extension) ??
+        generateFilename(defaultFilename, extension),
+    )
 
     await init()
-    await countdown()
 
-    const hasVisibleTouchesByDefault = getVisibleTouches()
-
-    setVisibleTouches(true)
-
-    try {
-      const result = await recordVideo(outPath)
-      if (!result.escaped) {
-        console.log("That's a wrap!", chalk.bold(outPath))
-      }
-      console.log()
-    } catch (e) {
-      console.error("failed in main loop", e)
+    if (mode === "video") {
+      await recordVideo(outPath)
+    } else {
+      await takeScreenshot(outPath)
     }
 
-    setVisibleTouches(hasVisibleTouchesByDefault)
+    if (cli.flags.open) {
+      open(outPath)
+    }
 
     process.exit(0)
   } catch (e) {
@@ -50,18 +77,22 @@ async function run() {
   }
 }
 
-function generateFilename() {
+/**
+ * @param {string} name
+ * @param {string} extension
+ */
+function generateFilename(name, extension) {
   const date = new Date()
   const year = date.getFullYear()
   const month = date.getMonth() + 1
   const day = date.getDate()
 
-  let filename = `./recording.${year}-${month}-${day}.00.mp4`
+  let filename = `./${name}.${year}-${month}-${day}.00.${extension}`
   let i = 1
   while (existsSync(filename)) {
-    filename = `./recording.${year}-${month}-${day}.${i
+    filename = `./${name}.${year}-${month}-${day}.${i
       .toString()
-      .padStart(2, "0")}.mp4`
+      .padStart(2, "0")}.${extension}`
     i++
   }
   return filename
@@ -70,13 +101,14 @@ function generateFilename() {
 /**
  *
  * @param {string | null | undefined} filename
+ * @param {string} extension
  */
-function sanitizeFilename(filename) {
+function sanitizeFilename(filename, extension) {
   if (!filename) {
     return null
   }
-  if (!filename.endsWith(".mp4")) {
-    return filename + ".mp4"
+  if (!filename.endsWith("." + extension)) {
+    return filename + "." + extension
   } else {
     return filename
   }
