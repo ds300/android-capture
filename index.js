@@ -7,18 +7,11 @@ const { countdown } = require("./src/countdown")
 const { cli } = require("./src/cli")
 const { normalize } = require("path")
 const logUpdate = require("log-update")
+const { pushContext, popContext } = require("./src/keyboardInput")
 
 const version = require(join(__dirname, "./package.json")).version
 
 console.log(chalk.bold("record-android-screen"), version, "\n")
-
-// without this, we would only get streams once enter is pressed
-process.stdin.setRawMode(true)
-
-// resume stdin in the parent process (node app won't quit all by itself
-// unless an error or process.exit() happens)
-process.stdin.resume()
-process.stdin.setEncoding("utf8")
 
 /**
  * @returns {boolean}
@@ -57,16 +50,6 @@ function setVisibleTouches(visible) {
   adb("shell", "settings", "put", "system", "show_touches", visible ? "1" : "0")
 }
 
-const ESCAPE_KEYS = {
-  // ctrl-c
-  "\u0003": true,
-  // escape
-  "\u001b": true,
-  // ctrl-z
-  "\u001a": true,
-  // ctrl-d
-  "\u0004": true,
-}
 const ENTER_KEYS = {
   // return
   "\r": true,
@@ -106,7 +89,6 @@ async function recordVideo(outFile) {
     let escaped = false
     recordProc.on("error", reject)
     recordProc.on("exit", async () => {
-      process.stdin.removeListener("data", handleKeyPress)
       display.stop()
 
       if (err) {
@@ -131,25 +113,19 @@ async function recordVideo(outFile) {
 
     // on any data into stdin
 
-    /**
-     * @param {string} key
-     */
-    function handleKeyPress(key) {
-      // ctrl-z
-      if (key === "\u001a") {
-        process.exit(1)
-      }
-      if (key in ESCAPE_KEYS) {
+    pushContext({
+      handleEscape() {
         escaped = true
         recordProc.kill("SIGTERM")
-        process.stdin.removeListener("data", handleKeyPress)
-      } else if (key in ENTER_KEYS) {
-        recordProc.kill("SIGTERM")
-        process.stdin.removeListener("data", handleKeyPress)
-      }
-      // write the key to stdout all normal like
-    }
-    process.stdin.on("data", handleKeyPress)
+        popContext()
+      },
+      handleKeyPress(key) {
+        if (key in ENTER_KEYS) {
+          recordProc.kill("SIGTERM")
+          popContext()
+        }
+      },
+    })
   })
 }
 
@@ -263,7 +239,7 @@ run()
 
 /**
  * TODO:
- *
- * - get nice robust abstract user input loop
- * - make sure ctrl-c always works
+ * - move recordVideo to own file
+ * - add screenshot capturing
+ * - rename to android-capture
  */

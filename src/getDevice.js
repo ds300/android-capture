@@ -1,5 +1,6 @@
 const { bgRed, bold, bgBlue, cyan, gray } = require("kleur")
 const logUpdate = require("log-update")
+const { pushContext, popContext } = require("./keyboardInput")
 
 const { spawnSafeSync } = require("./spawnSafeSync")
 
@@ -62,13 +63,14 @@ async function selectOption(title, options) {
   return new Promise((resolve) => {
     let selection = 0
     const draw = () => {
-      const lines = ["", "        " + bgBlue(` ${title} `), ""]
+      const lines = ["          " + bgBlue(` ${title} `), ""]
       for (let i = 0; i < options.length; i++) {
         lines.push(
           "  " +
             (i === selection
               ? cyan().bold("• [" + (i + 1) + "]")
               : gray("  [" + (i + 1) + "]")) +
+            " " +
             options[i],
         )
       }
@@ -77,37 +79,22 @@ async function selectOption(title, options) {
     }
 
     draw()
-    /**
-     * @param {string} key
-     */
-    function handleKeyPress(key) {
-      if (key === "\r") {
-        // enter!
-        process.stdin.removeListener("data", handleKeyPress)
-        resolve(selection)
-      } else if (key === "\u001b[B") {
-        // arrow down!
-        selection = Math.min(selection + 1, options.length - 1)
-        draw()
-      } else if (key === "\u001b[A") {
-        // arrow up!
-        selection = Math.max(selection - 1, 0)
-        draw()
-      } else if (key in ESCAPE_KEYS) {
-        process.exit(1)
-      }
-    }
-    process.stdin.on("data", handleKeyPress)
+    pushContext({
+      handleKeyPress(key) {
+        if (key === "\r") {
+          // enter!
+          popContext()
+          resolve(selection)
+        } else if (key === "\u001b[B") {
+          // arrow down!
+          selection = Math.min(selection + 1, options.length - 1)
+          draw()
+        } else if (key === "\u001b[A") {
+          // arrow up!
+          selection = Math.max(selection - 1, 0)
+          draw()
+        }
+      },
+    })
   })
-}
-
-const ESCAPE_KEYS = {
-  // ctrl-c
-  "\u0003": true,
-  // escape
-  "\u001b": true,
-  // ctrl-z
-  "\u001a": true,
-  // ctrl-d
-  "\u0004": true,
 }
