@@ -21,7 +21,7 @@ $ npx android-capture image [<output-filename>] [...options]
 
 ### Prerequisites
 
-You need to have the Android developer tools installed. In particular, [adb](https://developer.android.com/studio/command-line/adb) must be installed and in your path (i.e. `which adb` should have exit status 1).
+You need to have the Android developer tools installed. In particular, [adb](https://developer.android.com/studio/command-line/adb) must be installed and available in your terminal path.
 
 If you want to capture from a physical device, the device must be paired with your computer via [USB debugging](https://developer.android.com/studio/command-line/adb#Enabling) or [Wireless debugging](https://developer.android.com/studio/command-line/adb#connect-to-a-device-over-wi-fi-android-11+)
 
