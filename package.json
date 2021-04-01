@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "author": "David Sheldrick",
+  "repository": "ds300/android-capture",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^14.14.37",
