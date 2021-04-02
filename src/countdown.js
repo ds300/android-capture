@@ -16,7 +16,7 @@ module.exports.countdown = async () => {
         0,
         numCharsOfCountdownStringToUse,
       )
-      logUpdate(`          🎬 Get ready! ${countdownSoFar}\n\n`)
+      logUpdate(`    🎬 Get ready! ${countdownSoFar}\n\n`)
       if (ratio >= 1) {
         clearInterval(interval)
         r(null)

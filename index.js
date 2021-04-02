@@ -2,7 +2,6 @@
 
 const { join } = require("path")
 
-const chalk = require("kleur")
 const { init } = require("./src/adb")
 const { existsSync } = require("fs")
 const { cli } = require("./src/cli")
@@ -10,14 +9,14 @@ const { normalize } = require("path")
 const { recordVideo } = require("./src/recordVideo")
 const { takeScreenshot } = require("./src/takeScreenshot")
 const open = require("open")
-const { bgRed, bold } = require("kleur")
+const { bold, gray } = require("kleur")
 const { selectOption } = require("./src/selectOption")
 const logUpdate = require("log-update")
+const { fail } = require("./src/log")
 
 const version = require(join(__dirname, "./package.json")).version
 
-console.log()
-console.log(chalk.bold("android-capture"), version, "\n")
+console.log(bold().gray("android-capture"), gray(version), "\n")
 
 /**
  * @type {Record<string, boolean>}
@@ -42,10 +41,8 @@ const imageTypes = {
 /**
  * @param {any} message
  */
-function fail(message) {
-  console.error(bgRed(" ERROR "), message)
-  console.error("\nRun with", bold("--help"), "for usage information.")
-  process.exit(1)
+function error(message) {
+  fail(message, "\nRun with", bold("--help"), "for usage information.")
 }
 
 async function run() {
@@ -74,7 +71,7 @@ async function run() {
     }
 
     if (others.length) {
-      fail("Unexpected arguements: " + others.join(" "))
+      error("Unexpected arguements: " + others.join(" "))
     }
 
     const extension = mode === "image" ? "png" : "mp4"
@@ -87,7 +84,7 @@ async function run() {
     )
 
     if (cli.flags.copy && mode === "video") {
-      fail(`The ${bold("--copy")} option does not work with video.`)
+      error(`The ${bold("--copy")} option does not work with video.`)
     }
 
     const useTemporaryFile = !filename && cli.flags.copy && !cli.flags.open

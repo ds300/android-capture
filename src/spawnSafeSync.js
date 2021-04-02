@@ -1,14 +1,15 @@
 /**
- * @typedef {{ throwOnError?: boolean, logStdErrOnError?: boolean, maxBuffer?: number} & import('child_process').SpawnOptions} SpawnSafeOptions
+ * @typedef {{ failOnError?: boolean, maxBuffer?: number} & import('child_process').SpawnOptions} SpawnSafeOptions
  */
 
 /** @type {SpawnSafeOptions} */
 const defaultOptions = {
-  logStdErrOnError: true,
-  throwOnError: true,
+  failOnError: true,
 }
 
 const { spawnSync } = require("child_process")
+const { gray } = require("kleur")
+const { verbose, fail, formatSpawnArgs } = require("./log")
 
 class ConsoleError {
   /**
@@ -25,18 +26,17 @@ module.exports.spawnSafeSync = (
   /** @type {string[]} */ args,
   /** @type {SpawnSafeOptions} */ options,
 ) => {
+  verbose(`${gray("$")} ${command} ${formatSpawnArgs(args)}`)
   const mergedOptions = Object.assign({}, defaultOptions, options)
   const result = spawnSync(command, args, options)
   if (result.error || result.status !== 0) {
-    if (mergedOptions.logStdErrOnError) {
-      if (result.stderr) {
-        console.error(result.stderr.toString())
-      } else if (result.error) {
-        console.error(result.error)
-      }
-    }
-    if (mergedOptions.throwOnError) {
-      throw new ConsoleError(result)
+    if (mergedOptions.failOnError) {
+      const err = result.stderr ? result.stderr.toString() : ""
+      const out = result.stdout ? result.stdout.toString() : ""
+      fail(
+        `Command failed: ${command} ${formatSpawnArgs(args)}`,
+        ...[err, out, result.error].filter(Boolean),
+      )
     }
   }
   return result

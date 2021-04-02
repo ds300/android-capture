@@ -26,6 +26,9 @@ module.exports.cli = meow(
     ${bold("--help, -h")}
       Show this help text
 
+    ${bold("--verbose")}
+      Show verbose output
+
   Examples
 
     $ npx android-capture video
@@ -54,6 +57,10 @@ module.exports.cli = meow(
         default: true,
       },
       copy: {
+        type: "boolean",
+        default: false,
+      },
+      verbose: {
         type: "boolean",
         default: false,
       },

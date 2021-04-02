@@ -4,6 +4,7 @@ const { adb, adbAsync } = require("./adb")
 const { cli } = require("./cli")
 const { countdown } = require("./countdown")
 const { pushKeyboardContext, popKeyboardContext } = require("./keyboardInput")
+const { fail } = require("./log")
 const { getVisibleTouches, setVisibleTouches } = require("./visibleTouches")
 
 function getScreenSize() {
@@ -88,18 +89,17 @@ async function createRecording(outFile) {
       display.stop()
 
       if (err) {
-        console.log(err)
+        logUpdate.done()
+        fail("Failed to capture video.", err)
       }
 
       if (!escaped) {
-        logUpdate(
-          `          ${green("✔")} Cut!\n\nTransferring video from phone...`,
-        )
+        logUpdate(`    ${green("✔")} Cut!\n\nTransferring video from phone...`)
         await new Promise((r) => setTimeout(r, 2000))
         console.log()
         adb("pull", internalFilePath, outFile)
       } else {
-        logUpdate(`          ${bold().red("♺")} Cancelling...\n\n`)
+        logUpdate(`    ${bold().red("♺")} Cancelling...\n\n`)
       }
       adb("shell", "rm", internalFilePath)
       resolve({ escaped })
@@ -142,7 +142,7 @@ class RecordingMessage {
     return this
   }
   print() {
-    logUpdate(`          ${this.toggle ? red("⦿") : " "} Recording...
+    logUpdate(`    ${this.toggle ? red("⦿") : " "} Recording...
 
 Press ${printKey(bold().green("SPACE"))} to finish recording, or ${printKey(
       "ESC",
