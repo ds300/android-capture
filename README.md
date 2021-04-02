@@ -11,9 +11,9 @@
 - Take a screenshot directly to the clipboard:
   
   `npx android-capture image --copy`
-- Record a video to `./new-scroll-behaviour.mp4`
+- Record a video to `./new-scroll-behavior.mp4`
 
-  `npx android-capture video new-scroll-behaviour`
+  `npx android-capture video new-scroll-behavior`
 
 ## Usage
 
