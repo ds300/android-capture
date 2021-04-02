@@ -27,7 +27,7 @@ If you want to capture from a physical device, the device must be paired with yo
 
 ### Options
 
-- `--copy` (Screenshots only, macOS only)
+- `--copy` (Screenshots only, macOS only, linux/windows contributions welcome!)
 
   Copies the screenshot to the clipboard. If no output path is given, no file will be saved.
 
