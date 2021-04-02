@@ -1,27 +1,41 @@
 const { bold, bgRed } = require("kleur")
-const { adb } = require("./adb")
+const { adbAsync } = require("./adb")
 const { cli } = require("./cli")
 const { tmpdir, platform } = require("os")
 const { join, basename } = require("path")
-const { unlinkSync } = require("fs")
+const { unlinkSync, createWriteStream } = require("fs")
 const { spawnSafeSync } = require("./spawnSafeSync")
+const { fail } = require("./log")
 
 /**
  * @param {string} outFile
  * @param {boolean} useTemporaryFile
  */
 module.exports.takeScreenshot = async (outFile, useTemporaryFile) => {
-  const internalFilePath = "/sdcard/android-capture-image.png"
-  const externalFilePath = useTemporaryFile
+  const outputFilePath = useTemporaryFile
     ? join(tmpdir(), basename(outFile))
     : outFile
   console.log("Taking screenshot...\n")
-  adb("shell", "screencap", "-p", internalFilePath)
-  adb("pull", internalFilePath, externalFilePath)
-  adb("shell", "rm", internalFilePath)
+  const proc = adbAsync("exec-out", "screencap", "-p")
+  proc.stdout.pipe(createWriteStream(outputFilePath))
+
+  let err = ""
+  proc.stderr.on("data", (data) => {
+    err += data.toString()
+  })
+  proc.on("error", (error) => {
+    fail("Could not capture image", [error, err].filter(Boolean))
+  })
+  await new Promise((r) => {
+    proc.on("exit", r)
+  })
+  if (err) {
+    fail("Could not capture image", err)
+  }
+
   if (cli.flags.copy) {
     if (platform() === "darwin") {
-      spawnSafeSync(join(__dirname, "copy-image-macos"), [externalFilePath])
+      spawnSafeSync(join(__dirname, "copy-image-macos"), [outputFilePath])
       console.log("Image copied to clipboard!\n")
     } else {
       console.error(
@@ -34,7 +48,7 @@ module.exports.takeScreenshot = async (outFile, useTemporaryFile) => {
     }
   }
   if (useTemporaryFile) {
-    unlinkSync(externalFilePath)
+    unlinkSync(outputFilePath)
   } else {
     console.log("Image saved to", bold(outFile))
   }
