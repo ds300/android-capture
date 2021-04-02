@@ -6,6 +6,14 @@
 
 `android-capture` makes it easy to capture video and screenshots from Android devices and emulators.
 
+## Quick Reference
+
+- Take a screenshot directly to the clipboard:
+  
+  `npx android-capture image --copy`
+- Record a video to `./new-scroll-behaviour.mp4`
+
+  `npx android-capture video new-scroll-behaviour`
 
 ## Usage
 
