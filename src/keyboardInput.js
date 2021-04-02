@@ -39,7 +39,7 @@ module.exports.popKeyboardContext = () => {
 }
 
 function handleEscape() {
-  const handle = handlers[handlers.length - 1]?.handleEscape
+  const handle = (handlers[handlers.length - 1] || {}).handleEscape
   if (handle) {
     handle()
   } else {
@@ -52,7 +52,10 @@ process.stdin.addListener("data", (key) => {
   if (ESCAPE_KEYS[char]) {
     handleEscape()
   } else {
-    handlers[handlers.length - 1]?.handleKeyPress?.(char)
+    const handle = (handlers[handlers.length - 1] || {}).handleKeyPress
+    if (handle) {
+      handle(char)
+    }
   }
 })
 

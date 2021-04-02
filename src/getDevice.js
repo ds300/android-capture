@@ -48,7 +48,7 @@ module.exports.getDevice = async () => {
  */
 function parseDeviceLine(line) {
   const [id, _type, ...properties] = line.split(/\s+/)
-  const model = properties.find((p) => p.startsWith("model:"))?.split(":")[1]
+  const model = (properties.find((p) => p.startsWith("model:")) || "").split(":")[1]
   const isUSB = properties.some((p) => p.startsWith("usb:"))
   return { id, model, isUSB }
 }

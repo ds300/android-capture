@@ -82,7 +82,7 @@ async function run() {
       mode === "image" ? "android-screenshot" : "android-video"
 
     const outPath = normalize(
-      sanitizeFilename(filename, extension) ??
+      sanitizeFilename(filename, extension) ||
         generateFilename(defaultFilename, extension),
     )
 
