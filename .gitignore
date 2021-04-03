@@ -6,6 +6,7 @@ node_modules/
 .*
 !.gitignore
 !.prettierrc
+!.github/
 
 *.tgz
 
