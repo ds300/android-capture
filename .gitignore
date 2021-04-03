@@ -8,3 +8,5 @@ node_modules/
 !.prettierrc
 
 *.tgz
+
+tsconfig.tsbuildinfo

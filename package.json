@@ -5,6 +5,9 @@
   "author": "David Sheldrick",
   "repository": "ds300/android-capture",
   "license": "MIT",
+  "scripts": {
+    "test": "tsc"
+  },
   "devDependencies": {
     "@types/node": "^14.14.37",
     "np": "^7.4.0",
