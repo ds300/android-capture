@@ -5,14 +5,6 @@ const { selectOption } = require("./selectOption")
 const { spawnSafeSync } = require("./spawnSafeSync")
 
 module.exports.getDevice = async () => {
-  const res = spawnSafeSync("which", ["adb"], { failOnError: false })
-  if (res.status !== 0) {
-    fail(
-      `${bold("adb")} not found`,
-      "Please install and configure the android dev tools.",
-    )
-  }
-
   const result = spawnSafeSync("adb", ["devices", "-l"]).stdout.toString()
   const deviceLines = result
     .replace("List of devices attached", "")
